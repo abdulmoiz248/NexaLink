@@ -9,6 +9,10 @@ export class UserService {
     constructor(@InjectModel('User') private userModel: Model<User>) {}
 
     async createUser(username: string, password: string) {
+        const existingUser =await this.getUserByUsername(username);
+        if (existingUser) {
+            return null;
+        }
         console.log(`Create ${username} with password ${password}`);
         const hashedpass=await bcrypt.hash(password,10);
         const user = new this.userModel({ username, password: hashedpass });

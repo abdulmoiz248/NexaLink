@@ -1,8 +1,10 @@
-import { Body, Controller, Request,Get, Patch } from '@nestjs/common';
+import { Body, Controller, Request,Get, Patch, UseGuards } from '@nestjs/common';
 import { ChatrequestService } from './chatrequest.service';
+import { JwtAuthGuard } from 'src/auth/jwtAuthGuard';
 
 
 @Controller('chatrequest')
+@UseGuards(JwtAuthGuard)
 export class ChatrequestController {
   constructor(private readonly chatrequestService: ChatrequestService) {}
 
