@@ -7,46 +7,45 @@ export class ChatGateway implements OnGatewayConnection,OnGatewayDisconnect{
 
   @WebSocketServer() server:Server;
 
-  private activeUsers=new Map<string,string>();
+
 
   handleConnection(client: any, ...args: any[]) {
     console.log('Client connected ', client.id );
   }
-  handleDisconnect(client: any): void {
-    console.log('Client disconnected ', client.id );
-    const userId = [...this.activeUsers.entries()].find(([_, socketId]) => socketId === client.id)?.[0];
-    if (userId) this.activeUsers.delete(userId);
-    this.server.emit('activeUsers', Array.from(this.activeUsers.keys()));
-  }
+
 
    constructor(private chatService: ChatService){}
 
 
-  @SubscribeMessage('sendMessage')
-  async handleMessage(@MessageBody() {sender,reciever,message}: {sender:string,reciever:string,message:string} ){
-    const recieverSocket=this.activeUsers.get(reciever);
-    this.chatService.saveMessage(sender,reciever,message);
-    if(recieverSocket){
-      this.server.to(recieverSocket).emit('newMessage',{sender,message});
-      await this.chatService.markMessagesAsRead(reciever);
-    }
-  }
-
+   @SubscribeMessage('sendMessage')
+   async handleMessage(
+     @MessageBody() { sender, receiver, message }: { sender: string; receiver: string; message: string }
+   ) {
+     const receiverSocket = this.chatService.activeUsers.get(receiver);
+     const savedMessage = await this.chatService.saveMessage(sender, receiver, message, receiverSocket);
+   
+     if (receiverSocket) {
+       this.server.to(receiverSocket).emit('newMessage', { sender, message, delivered: true });
+     }
+   }
+   
 
   @SubscribeMessage('join')
   async handleJoin(@MessageBody() userId:string,@ConnectedSocket() client:Socket){
-    this.activeUsers.set(userId, client.id);
-    this.server.emit('activeUsers', Array.from(this.activeUsers.keys()));
+    this.chatService.activeUsers.set(userId, client.id);
+    this.server.emit('activeUsers', Array.from(this.chatService.activeUsers.keys()));
     
-    const unread=await this.chatService.getUnreadMessages(userId);
-    
-    unread.forEach((msg) => {
-      this.server.to(client.id).emit('receiveMessage', { sender: msg.sender, message: msg.message });
-     
-    });
-    await this.chatService.markMessagesAsRead(userId);
-  
-    console.log(`User ${userId} joined and received ${unread.length} unread messages.`);
+    await this.chatService.markDelivered(userId,this.server);
+  }
+  @SubscribeMessage('disconnectUser')
+  handleDisconnect(@MessageBody() userId: string) {
+    this.chatService.removeActiveUser(userId);
+    this.server.emit('activeUsers', Array.from(this.chatService.activeUsers.keys()));
+  }
+
+  @SubscribeMessage('openChat')
+  async handleOpenChat(@MessageBody() { senderId, receiverId }: { senderId: string; receiverId: string }) {
+    await this.chatService.markMessagesAsRead(senderId, receiverId, this.server);
   }
 
   
