@@ -49,4 +49,20 @@ export class ChatGateway implements OnGatewayConnection,OnGatewayDisconnect{
   }
 
   
+  @SubscribeMessage('typing')
+handleTyping(@MessageBody() { sender, receiver }: { sender: string; receiver: string }) {
+  const receiverSocket = this.chatService.getUserSocket(receiver);
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('typing', { sender });
+  }
+}
+
+@SubscribeMessage('stopTyping')
+handleStopTyping(@MessageBody() { sender, receiver }: { sender: string; receiver: string }) {
+  const receiverSocket = this.chatService.getUserSocket(receiver);
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('stopTyping', { sender });
+  }
+}
+
 }
