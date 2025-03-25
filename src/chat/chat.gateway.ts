@@ -65,4 +65,42 @@ handleStopTyping(@MessageBody() { sender, receiver }: { sender: string; receiver
   }
 }
 
+
+@SubscribeMessage('callUser')
+handleCallUser(@MessageBody() { sender,receiver,signal }: { receiver: string; signal: any; sender: string }) {
+  const receiverSocket = this.chatService.getUserSocket(receiver);
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('callUser', { sender,signal });
+  }
+}
+
+@SubscribeMessage('answerCall')
+async handleAnswerCall(
+  @MessageBody() { sender, receiver, signal }: { sender: string; receiver: string; signal: any }
+) {
+  const senderSocket = this.chatService.activeUsers.get(sender);
+  if (senderSocket) {
+    this.server.to(senderSocket).emit('callAccepted', { receiver, signal });
+  }
+}
+
+@SubscribeMessage('iceCandidate')
+async handleIceCandidate(
+  @MessageBody() { sender, receiver, candidate }: { sender: string; receiver: string; candidate: any }
+) {
+  const receiverSocket = this.chatService.activeUsers.get(receiver);
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('iceCandidate', { sender, candidate });
+  }
+}
+
+@SubscribeMessage('endCall')
+async handleEndCall(@MessageBody() { sender, receiver }: { sender: string; receiver: string }) {
+  const receiverSocket = this.chatService.activeUsers.get(receiver);
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('callEnded');
+  }
+}
+
+
 }
