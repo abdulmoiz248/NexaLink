@@ -21,4 +21,6 @@ export class UserService {
     async getUserByUsername(username: string) {
         return await this.userModel.findOne({ username });
     }
+
+   
 }
