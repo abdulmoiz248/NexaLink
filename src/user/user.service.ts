@@ -22,5 +22,8 @@ export class UserService {
         return await this.userModel.findOne({ username });
     }
 
+    async getAllUsers() {
+        return this.userModel.find().select("-password"); 
+      }
    
 }
