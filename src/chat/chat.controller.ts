@@ -9,6 +9,6 @@ export class ChatController {
 
   @Get('history')
   async getHistory(@Req() req,@Query('receiverId') reciever:string) {
-    return this.chatService.getChatHistory(req.user.userId,reciever);
+    return this.chatService.getChatHistory(req.user.username,reciever);
   }
 }

@@ -10,8 +10,6 @@ export class ChatService {
 
      activeUsers=new Map<string,string>();
 
-
-
     constructor(@InjectModel('msg')private msg: Model<Message>){}
 
     async saveMessage(sender: string, receiver: string, message: string, receiverSocket?: string) {
@@ -27,14 +25,16 @@ export class ChatService {
       return await newMessage.save();
     }
 
-    async getChatHistory(userId: string, receiver: string) {
-        return this.msg.find({
-          $or: [
-            { sender: userId, receiver },
-            { sender: receiver, receiver: userId },
-          ],
-        }).sort({ createdAt: 1 }).exec();
-      }
+    async getChatHistory(userId: string, receiverId: string) {
+      const sender = await this.msg.find({ sender: userId, receiver: receiverId }).sort({ time: 1 });
+      const reciever = await this.msg.find({ sender: receiverId, receiver: userId }).sort({ time: 1 });
+    
+      console.log("Sent Messages:", sender);
+      console.log("Received Messages:", reciever);
+    
+      return { sender, reciever };
+    }
+    
 
       async getUnreadMessages(receiver: string) {
         return this.msg.find({ receiver ,read:false}).sort({ createdAt: 1 }).exec();

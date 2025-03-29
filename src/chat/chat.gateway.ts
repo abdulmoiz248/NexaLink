@@ -2,37 +2,40 @@ import { ConnectedSocket, MessageBody, OnGatewayConnection, OnGatewayDisconnect,
 import { Server, Socket } from 'socket.io';
 import { ChatService } from './chat.service';
 
-@WebSocketGateway({cors:true})
+@WebSocketGateway( {  cors: {
+  origin: 'http://localhost:3000',  // Explicitly allow frontend origin
+  credentials: true,  // Allow credentials
+}, })
 export class ChatGateway implements OnGatewayConnection,OnGatewayDisconnect{
 
   @WebSocketServer() server:Server;
 
-
-
-  handleConnection(client: any, ...args: any[]) {
-    console.log('Client connected ', client.id );
-  }
-
-
    constructor(private chatService: ChatService){}
 
+   handleConnection(client: any, ...args: any[]) {
+    console.log('Client connected ', client.id );
+    console.log(this.chatService.activeUsers)
+  }
 
-   @SubscribeMessage('sendMessage')
-   async handleMessage(
-     @MessageBody() { sender, receiver, message }: { sender: string; receiver: string; message: string }
-   ) {
-     const receiverSocket = this.chatService.activeUsers.get(receiver);
-     const savedMessage = await this.chatService.saveMessage(sender, receiver, message, receiverSocket);
+  //  @SubscribeMessage('sendMessage')
+  //  async handleMessage(
+  //    @MessageBody() { sender, receiver, message }: { sender: string; receiver: string; message: string }
+  //  ) {
+  //    const receiverSocket = this.chatService.activeUsers.get(receiver);
+  //    const savedMessage = await this.chatService.saveMessage(sender, receiver, message, receiverSocket);
    
-     if (receiverSocket) {
-       this.server.to(receiverSocket).emit('newMessage', { sender, message, delivered: true });
-     }
-   }
+  
+  //    if (receiverSocket) {
+  //      this.server.to(receiverSocket).emit('newMessage', { sender, message, delivered: true });
+  //    }
+  //  }
    
 
   @SubscribeMessage('join')
   async handleJoin(@MessageBody() userId:string,@ConnectedSocket() client:Socket){
+    console.log('User joined:', userId, client.id);
     this.chatService.activeUsers.set(userId, client.id);
+    console.log("Active users:", this.chatService.activeUsers)
     this.server.emit('activeUsers', Array.from(this.chatService.activeUsers.keys()));
     
     await this.chatService.markDelivered(userId,this.server);
@@ -99,6 +102,26 @@ async handleEndCall(@MessageBody() { sender, receiver }: { sender: string; recei
   const receiverSocket = this.chatService.activeUsers.get(receiver);
   if (receiverSocket) {
     this.server.to(receiverSocket).emit('callEnded');
+  }
+}
+
+
+@SubscribeMessage('sendMessage')
+async handleMessages(
+  @MessageBody() { sender, receiver, message }: { sender: string; receiver: string; message: string }
+) {
+  const receiverSocket = this.chatService.activeUsers.get(receiver);
+  const savedMessage = await this.chatService.saveMessage(sender, receiver, message, receiverSocket);
+
+  // Emit the new message to the receiver if online
+  if (receiverSocket) {
+    this.server.to(receiverSocket).emit('newMessage', { sender, message, delivered: true });
+  }
+
+
+  const senderSocket = this.chatService.activeUsers.get(sender);
+  if (senderSocket) {
+    this.server.to(senderSocket).emit('newMessage', { sender, message });
   }
 }
 
