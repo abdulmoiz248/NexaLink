@@ -29,9 +29,6 @@ export class ChatService {
       const sender = await this.msg.find({ sender: userId, receiver: receiverId }).sort({ time: 1 });
       const reciever = await this.msg.find({ sender: receiverId, receiver: userId }).sort({ time: 1 });
     
-      console.log("Sent Messages:", sender);
-      console.log("Received Messages:", reciever);
-    
       return { sender, reciever };
     }
     

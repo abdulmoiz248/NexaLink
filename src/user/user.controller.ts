@@ -23,13 +23,9 @@ export class UserController {
   @UseGuards(JwtAuthGuard)
   async getAUsers(@Query('username') id: string) {
     
-      if (!Types.ObjectId.isValid(id)) {
-          throw new BadRequestException('Invalid user ID format');
-      }
-  
-      const objectId = new Types.ObjectId(id);
+     
    
-      const user = await this.userService.getUserById(objectId);
+      const user = await this.userService.getUserByUsername(id);
    
       return user;
   }
